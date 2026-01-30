@@ -1,0 +1,137 @@
+-- ts file was generated at discord.gg/25ms
+-- Material Update: Windows = Lava | Wood = DiamondPlate Gray | Walls = Lava
+
+game.ReplicatedStorage.GameData.LatestRoom.Changed:Connect(function()
+    local room = game.ReplicatedStorage.GameData.LatestRoom.Value
+    local roomFolder = workspace.CurrentRooms[room]
+
+    -- ❌ XÓA TOÀN BỘ RUG
+    for _, obj in pairs(roomFolder:GetDescendants()) do
+        if obj.Name == "Rug" then
+            obj:Destroy()
+        end
+    end
+
+    -- 🪵 ĐỔI MỌI GỖ → DIAMOND PLATE XÁM ĐẬM
+    for _, obj in pairs(roomFolder:GetDescendants()) do
+        if obj:IsA("BasePart") then
+            if obj.Material == Enum.Material.Wood or obj.Material == Enum.Material.WoodPlanks then
+                obj.Material = Enum.Material.DiamondPlate
+                obj.Color = Color3.fromRGB(20,20,20)
+            end
+        end
+    end
+
+    if roomFolder:FindFirstChild('RainSky') then
+        roomFolder.RainSky.Skybox.Material = Enum.Material.CrackedLava
+        roomFolder.RainSky.Skybox.Color = Color3.fromRGB(35, 15, 10)
+        roomFolder.RainSky.Skybox.Parent = roomFolder
+        roomFolder.RainSky:Destroy()
+    end
+
+    local v1, v2, v3 = pairs(roomFolder.Parts:GetDescendants())
+    while true do
+        local v4
+        v3, v4 = v1(v2, v3)
+        if v3 == nil then break end
+
+        if v4:IsA('BasePart') then
+            if v4.Name == 'Wall' or v4.Name == 'WallAlt' then
+                v4.Material = Enum.Material.CrackedLava
+                v4.Color = Color3.fromRGB(35, 15, 10)
+            elseif v4.Name == 'Wall_Strip' or v4.Name == 'Floor' then
+                v4.Material = Enum.Material.DiamondPlate
+                v4.Color = Color3.fromRGB(20, 20, 20)
+            end
+        end
+
+        if v4:IsA('Model') and v4.Name == 'Desk_Lamp' and v4.PrimaryPart then
+            local v5 = game:GetObjects('rbxassetid://12832377808')[1]
+            v5.Parent = v4.Parent
+            v5:PivotTo(v4.PrimaryPart.CFrame)
+            v4:Destroy()
+        end
+    end
+
+    local v6, v7, v8 = pairs(roomFolder.Assets:GetDescendants())
+    while true do
+        local v9
+        v8, v9 = v6(v7, v8)
+        if v8 == nil then break end
+        if v9:IsA('Model') and v9.Name == 'Bookcase' and v9.PrimaryPart then
+            local v10 = game:GetObjects('rbxassetid://12826469053')[1]
+            v10.Parent = v9.Parent
+            for _, part in pairs(v10:GetDescendants()) do
+                if part:IsA("BasePart") then 
+                    part.Material = Enum.Material.DiamondPlate 
+                    part.Color = Color3.fromRGB(20, 20, 20)
+                end
+            end
+            v10:PivotTo(v9.PrimaryPart.CFrame)
+            v9:Destroy()
+        end
+    end
+
+    local v16, v17, v18 = pairs(roomFolder.Assets:GetDescendants())
+    while true do
+        local v19
+        v18, v19 = v16(v17, v18)
+        if v18 == nil then break end
+        if v19:IsA('Model') and v19.Name == 'Window' and v19.PrimaryPart then
+            local v20 = game:GetObjects('rbxassetid://12926869642')[1]
+            v20.Parent = v19.Parent
+            if v20:FindFirstChild("Rock") then 
+                v20.Rock.Material = Enum.Material.CrackedLava 
+                v20.Rock.Color = Color3.fromRGB(35, 15, 10)
+            end
+            v20:PivotTo(v19.PrimaryPart.CFrame)
+            v19:Destroy()
+        end
+    end
+
+    local v21, v22, v23 = pairs(roomFolder.Assets:GetDescendants())
+    while true do
+        local v24
+        v23, v24 = v21(v22, v23)
+        if v23 == nil then break end
+        if v24:IsA('Model') and v24.Name == 'Window_Tall' and v24.PrimaryPart then
+            local v25 = game:GetObjects('rbxassetid://12926865352')[1]
+            v25.Parent = v24.Parent
+            if v25:FindFirstChild("Rock") then 
+                v25.Rock.Material = Enum.Material.CrackedLava 
+                v25.Rock.Color = Color3.fromRGB(35, 15, 10)
+            end
+            v25:PivotTo(v24.PrimaryPart.CFrame)
+            v24:Destroy()
+        end
+    end
+
+    local v30, v31, v32 = pairs(roomFolder.Assets:GetChildren())
+    while true do
+        local v33
+        v32, v33 = v30(v31, v32)
+        if v32 == nil then break end
+        if v33:IsA('Model') and v33.Name == 'Fireplace' and v33:FindFirstChild("Fence") then
+            local v34 = game:GetObjects('rbxassetid://12832394772')[1]
+            v34.Parent = v33.Parent
+            for _, p in pairs(v34:GetDescendants()) do
+                if p:IsA("BasePart") then p.Material = Enum.Material.CrackedLava end
+            end
+            v34:PivotTo(v33.Fence.CFrame + Vector3.new(0, -1, 0))
+            v33:Destroy()
+        end
+    end
+
+    local v48, v49, v50 = pairs(roomFolder.Assets:GetDescendants())
+    while true do
+        local v51
+        v50, v51 = v48(v49, v50)
+        if v50 == nil then break end
+        if v51:IsA('BasePart') then
+            if v51.Name == "WallAlt" or v51.Name == "Wall" then
+                v51.Material = Enum.Material.CrackedLava
+                v51.Color = Color3.fromRGB(35, 15, 10)
+            end
+        end
+    end
+end)
