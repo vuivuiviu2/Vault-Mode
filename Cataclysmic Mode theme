@@ -90,12 +90,12 @@ workspace.ChildAdded:Connect(function(child)
 
         rushSound = CustomGitSound(
             "https://github.com/vuivuiviu2/Vault-Mode/raw/refs/heads/main/Cataclysmic%20leak%20music%20(2).mp3",
-            1,
+            0.5,
             "RushMusic"
         )
 
         -- 🔥 Sau 2.5 giây từ khi Rush music phát → chạy Lavacuc
-        task.delay(2.5, function()
+        task.delay(4, function()
             if lavaTriggered then return end
             lavaTriggered = true
 
