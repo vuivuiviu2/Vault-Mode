@@ -1,0 +1,306 @@
+-------------------------------------------------------------------------
+-- PHẦN 1: MÔI TRƯỜNG TỐI + ĐÈN PIN (SCRIPT 2 CŨ)
+-- (Phải để lên trước để cài đặt ánh sáng ngay lập tức)
+-------------------------------------------------------------------------
+
+local Players = game:GetService("Players")
+local RunService = game:GetService("RunService")
+local Lighting = game:GetService("Lighting")
+local Workspace = game:GetService("Workspace")
+
+local player = Players.LocalPlayer
+local backpack = player:WaitForChild("Backpack")
+local camera = workspace.CurrentCamera
+
+--===== DARK ENVIRONMENT + FOG =====
+Lighting.Technology = Enum.Technology.Compatibility
+Lighting.Brightness = 0
+Lighting.ClockTime = 0
+Lighting.ExposureCompensation = -2.6
+Lighting.Ambient = Color3.fromRGB(20,20,20)
+Lighting.OutdoorAmbient = Color3.fromRGB(20,20,20)
+
+Lighting.FogColor = Color3.fromRGB(0,0,0)
+Lighting.FogStart = 20
+Lighting.FogEnd = 120
+
+for _, v in ipairs(Lighting:GetChildren()) do
+	if v:IsA("BloomEffect")
+		or v:IsA("SunRaysEffect")
+		or v:IsA("DepthOfFieldEffect") then
+		v.Enabled = false
+	end
+	if v:IsA("Atmosphere") then
+		v.Density = 1
+		v.Color = Color3.fromRGB(0,0,0)
+		v.Decay = Color3.fromRGB(0,0,0)
+	end
+end
+
+--===== FLASHLIGHT CONFIG =====
+local TOOL_ICON_ID = 122985734854641
+local MODEL_ID = 71599172061351
+local HOLD_ANIMATION_ID = 100296215597460
+
+local SPOTLIGHT_COLOR = Color3.fromRGB(255,0,0) -- hồng
+
+local MAX_BATTERY = 100
+local LOW_BATTERY = 20
+local DRAIN_RATE = 1
+local CHARGE_RATE = 0.8
+local BLINK_SPEED = 1.8
+
+local battery = MAX_BATTERY
+local equipped = false
+local blinkAlpha = 1
+local blinkDir = -1
+
+--===== LOAD TOOL MODEL =====
+local objects = game:GetObjects("rbxassetid://" .. MODEL_ID)
+if not objects or #objects == 0 then return end
+local model = objects[1]
+
+local tool = Instance.new("Tool")
+tool.Name = "Flashlight"
+tool.RequiresHandle = true
+tool.TextureId = "rbxassetid://"..TOOL_ICON_ID
+
+local handle = Instance.new("Part")
+handle.Name = "Handle"
+handle.Size = Vector3.new(1,1,1)
+handle.Transparency = 1
+handle.CanCollide = false
+handle.Parent = tool
+
+model.Parent = tool
+if model:IsA("Model") then
+	model:PivotTo(handle.CFrame * CFrame.new(0,0,-0.8))
+else
+	model.CFrame = handle.CFrame * CFrame.new(0,0,-0.8)
+end
+
+-- Gắn tất cả part với handle, giữ màu gốc
+for _, obj in ipairs(model:GetDescendants()) do
+	if obj:IsA("BasePart") then
+		obj.Anchored = false
+		obj.CanCollide = false
+		local weld = Instance.new("WeldConstraint")
+		weld.Part0 = handle
+		weld.Part1 = obj
+		weld.Parent = handle
+	end
+end
+
+--===== SPOTLIGHT =====
+local attachment = Instance.new("Attachment", handle)
+local light = Instance.new("SpotLight")
+light.Parent = attachment
+light.Enabled = false
+light.Color = SPOTLIGHT_COLOR
+light.Brightness = 25
+light.Range = 100
+light.Angle = 25
+light.Shadows = true
+light.Face = Enum.NormalId.Front
+
+tool.Parent = backpack
+
+--===== CAMERA FOLLOW =====
+local camConn
+local function startCameraFollow()
+	camConn = RunService.RenderStepped:Connect(function()
+		local origin = attachment.WorldPosition
+		attachment.WorldCFrame = CFrame.lookAt(origin, origin + camera.CFrame.LookVector)
+	end)
+end
+local function stopCameraFollow()
+	if camConn then
+		camConn:Disconnect()
+		camConn = nil
+	end
+end
+
+--===== UI =====
+local gui = Instance.new("ScreenGui")
+gui.ResetOnSpawn = false
+gui.Parent = player.PlayerGui
+
+local frame = Instance.new("Frame")
+frame.AnchorPoint = Vector2.new(1,0.5)
+frame.Position = UDim2.new(1,-30,0.45,0)
+frame.Size = UDim2.new(0,16,0,140)
+frame.BackgroundColor3 = Color3.fromRGB(15,15,20)
+frame.BorderSizePixel = 0
+frame.Parent = gui
+
+local bar = Instance.new("Frame")
+bar.AnchorPoint = Vector2.new(0.5,1)
+bar.Position = UDim2.new(0.5,0,1,0)
+bar.Size = UDim2.new(1,-4,1,-4)
+bar.BackgroundColor3 = SPOTLIGHT_COLOR
+bar.BorderSizePixel = 0
+bar.Parent = frame
+
+local percentText = Instance.new("TextLabel")
+percentText.Size = UDim2.new(3,0,0,22)
+percentText.Position = UDim2.new(-1,0,1,6)
+percentText.BackgroundTransparency = 1
+percentText.TextColor3 = SPOTLIGHT_COLOR
+percentText.TextScaled = true
+percentText.Font = Enum.Font.GothamBold
+percentText.Text = "100%"
+percentText.Parent = frame
+
+local function updateUI()
+	bar.Size = UDim2.new(1,-4,battery / MAX_BATTERY,-4)
+	percentText.Text = math.floor(battery) .. "%"
+end
+
+--===== HOLD ANIMATION =====
+local animTrack
+local function playHoldAnimation(character)
+	local humanoid = character:FindFirstChildOfClass("Humanoid")
+	if not humanoid then return end
+	local animator = humanoid:FindFirstChildOfClass("Animator") or Instance.new("Animator", humanoid)
+	local animation = Instance.new("Animation")
+	animation.AnimationId = "rbxassetid://" .. HOLD_ANIMATION_ID
+	animTrack = animator:LoadAnimation(animation)
+	animTrack.Priority = Enum.AnimationPriority.Action
+	animTrack.Looped = true
+	animTrack:Play()
+end
+local function stopHoldAnimation()
+	if animTrack then
+		animTrack:Stop()
+		animTrack:Destroy()
+		animTrack = nil
+	end
+end
+
+--===== BATTERY LOGIC + PARTICLEEMITTER CONTROL =====
+local particleEmitters = {}
+for _, obj in ipairs(model:GetDescendants()) do
+	if obj:IsA("ParticleEmitter") then
+		table.insert(particleEmitters, obj)
+	end
+end
+
+RunService.RenderStepped:Connect(function(dt)
+	if equipped then
+		battery -= DRAIN_RATE * dt
+	else
+		battery += CHARGE_RATE * dt
+	end
+	battery = math.clamp(battery, 0, MAX_BATTERY)
+	updateUI()
+
+	-- bật/tắt spotlight và particle emitter
+	if battery <= 0 then
+		light.Enabled = false
+		for _, pe in ipairs(particleEmitters) do
+			pe.Enabled = false
+		end
+	else
+		if equipped then
+			light.Enabled = true
+		end
+		for _, pe in ipairs(particleEmitters) do
+			pe.Enabled = true
+		end
+	end
+
+	-- BLINK khi pin thấp
+	if equipped and battery <= LOW_BATTERY and battery > 0 then
+		blinkAlpha += blinkDir * BLINK_SPEED * dt
+		if blinkAlpha <= 0.2 then blinkDir = 1 end
+		if blinkAlpha >= 1 then blinkDir = -1 end
+		light.Brightness = 25 * blinkAlpha
+		bar.BackgroundTransparency = 1 - blinkAlpha
+	else
+		blinkAlpha = 1
+		light.Brightness = 25
+		bar.BackgroundTransparency = 0
+	end
+end)
+
+--===== EQUIP / UNEQUIP =====
+tool.Equipped:Connect(function()
+	equipped = true
+	playHoldAnimation(player.Character or player.CharacterAdded:Wait())
+	if battery > 0 then
+		light.Enabled = true
+	end
+	startCameraFollow()
+end)
+
+tool.Unequipped:Connect(function()
+	equipped = false
+	stopHoldAnimation()
+	light.Enabled = false
+	stopCameraFollow()
+end)
+
+--===== REMOVE LIGHTS CỦA ĐÈN TREO TƯỜNG (Của Script 2) =====
+local function removeWallLightFixture(obj)
+	if obj.Name:match("LightFixture") then
+		for _, lightObj in ipairs(obj:GetDescendants()) do
+			if lightObj:IsA("Light") then
+				lightObj.Enabled = false
+				if lightObj.Parent then lightObj:Destroy() end
+			end
+		end
+	end
+end
+
+Workspace.DescendantAdded:Connect(function(obj)
+	removeWallLightFixture(obj)
+end)
+
+for _, obj in ipairs(Workspace:GetDescendants()) do
+	removeWallLightFixture(obj)
+end
+
+-------------------------------------------------------------------------
+-- PHẦN 2: XỬ LÝ ĐÈN TREO TƯỜNG (SCRIPT 1 CŨ)
+-- (Đặt ở cuối cùng vì nó chứa vòng lặp while true)
+-------------------------------------------------------------------------
+
+local function processFixture(obj)
+
+	-- Chỉ xử lý model đèn tường
+	if not obj.Name:match("LightFixture") then
+		return
+	end
+
+	-- Nếu đã xử lý rồi thì bỏ qua
+	if obj:GetAttribute("WallLightDone") then
+		return
+	end
+
+	for _, v in ipairs(obj:GetDescendants()) do
+
+		-- Tắt mọi nguồn sáng bên trong
+		if v:IsA("PointLight") or v:IsA("SpotLight") or v:IsA("SurfaceLight") then
+			v.Enabled = false
+		end
+
+		-- Đổi Neon sang đỏ
+		if v:IsA("BasePart") and v.Material == Enum.Material.Neon then
+			v.Color = Color3.fromRGB(255,0,0)
+		end
+
+	end
+
+	-- Đánh dấu đã xử lý
+	obj:SetAttribute("WallLightDone", true)
+end
+
+--------------------------------------------------
+-- 🔄 QUÉT MỖI 1 GIÂY
+--------------------------------------------------
+while true do
+	for _, obj in ipairs(Workspace:GetDescendants()) do
+		processFixture(obj)
+	end
+	task.wait(1)
+end
