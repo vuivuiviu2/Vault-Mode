@@ -47,7 +47,7 @@ local function spawnStrike(room)
 
         local sound = Instance.new("Sound")
         sound.SoundId = explosionSoundId
-        sound.Volume = 3
+        sound.Volume = 1
         sound.RollOffMaxDistance = 150
         sound.Parent = p
         sound:Play()
