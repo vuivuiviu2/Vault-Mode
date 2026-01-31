@@ -1,0 +1,172 @@
+local TweenService = game:GetService("TweenService")
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local Debris = game:GetService("Debris")
+
+local assetAir = "rbxassetid://117115349891180"
+local assetUnder = "rbxassetid://101525277696517"
+local explosionSoundId = "rbxassetid://125231599930313"
+
+local activeUnderMarks = {}
+
+--------------------------------------------------
+-- 📦 TẠO 1 VỤ STRIKE
+--------------------------------------------------
+local function spawnStrike(room)
+
+    local floor = room:FindFirstChild("Floor", true) or room:FindFirstChildWhichIsA("BasePart", true)
+    if not floor then return end
+
+    local size = floor.Size
+    local cf = floor.CFrame
+    local margin = 4
+
+    local offsetX = math.random(-size.X/2 + margin, size.X/2 - margin)
+    local offsetZ = math.random(-size.Z/2 + margin, size.Z/2 - margin)
+    local worldPos = (cf * CFrame.new(offsetX, 0, offsetZ)).Position
+
+    local posAir = worldPos + Vector3.new(0, 15, 0)
+    local posUnder = worldPos + Vector3.new(0, -1.5, 0)
+
+    ---------------- ☁ MODEL TRÊN KHÔNG ----------------
+    local airObj = game:GetObjects(assetAir)[1]
+    if airObj then
+        airObj.Parent = workspace
+        for _,v in pairs(airObj:GetDescendants()) do
+            if v:IsA("BasePart") then v.Anchored = true end
+        end
+
+        local p = airObj:FindFirstChildWhichIsA("BasePart", true)
+        airObj.PrimaryPart = p
+        airObj:SetPrimaryPartCFrame(CFrame.new(posAir))
+
+        local explosion = Instance.new("Explosion")
+        explosion.Position = p.Position
+        explosion.BlastRadius = 8
+        explosion.BlastPressure = 0
+        explosion.Parent = workspace
+
+        local sound = Instance.new("Sound")
+        sound.SoundId = explosionSoundId
+        sound.Volume = 3
+        sound.RollOffMaxDistance = 150
+        sound.Parent = p
+        sound:Play()
+        Debris:AddItem(sound, 5)
+
+        task.delay(1, function()
+            for _,v in pairs(airObj:GetDescendants()) do
+                if v:IsA("BasePart") then v.Anchored = false end
+            end
+            task.wait(1)
+            if airObj then airObj:Destroy() end
+        end)
+    end
+
+    ---------------- 🟥 DẤU DƯỚI ĐẤT ----------------
+    task.delay(0.9, function()
+
+        local underObj = game:GetObjects(assetUnder)[1]
+        if not underObj then return end
+        underObj.Parent = workspace
+        underObj.CFrame = CFrame.new(posUnder)
+
+        for _,v in pairs(underObj:GetDescendants()) do
+            if v:IsA("Texture") or v:IsA("Decal") then
+                v.Transparency = 0
+            end
+        end
+
+        for _,v in pairs(underObj:GetDescendants()) do
+            if v:IsA("PointLight") then
+                v.Brightness = 10
+                v.Range = math.max(v.Range, 8)
+            end
+        end
+
+        local originalSize = underObj.Size
+        underObj.Size = originalSize / 5
+        underObj.Transparency = 1
+        underObj.CanCollide = false
+
+        TweenService:Create(
+            underObj,
+            TweenInfo.new(0.8, Enum.EasingStyle.Quad),
+            {Size = originalSize, Transparency = 0}
+        ):Play()
+
+        table.insert(activeUnderMarks, underObj)
+
+        ---------------- HITBOX DAMAGE ----------------
+        local hitbox = Instance.new("Part")
+        hitbox.Size = originalSize
+        hitbox.CFrame = underObj.CFrame * CFrame.new(0,1,0)
+        hitbox.Transparency = 1
+        hitbox.Anchored = true
+        hitbox.CanCollide = false
+        hitbox.Parent = workspace
+        Debris:AddItem(hitbox, 8)
+
+        local damaging = {}
+
+        hitbox.Touched:Connect(function(hit)
+            local hum = hit.Parent and hit.Parent:FindFirstChildOfClass("Humanoid")
+            if hum and not damaging[hum] then
+                damaging[hum] = true
+                task.spawn(function()
+                    while damaging[hum] and hum.Health > 0 do
+                        hum:TakeDamage(2)
+                        task.wait(0.4)
+                    end
+                end)
+            end
+        end)
+
+        hitbox.TouchEnded:Connect(function(hit)
+            local hum = hit.Parent and hit.Parent:FindFirstChildOfClass("Humanoid")
+            if hum then damaging[hum] = nil end
+        end)
+    end)
+end
+
+--------------------------------------------------
+-- 🚪 QUA PHÒNG → KÍCH HOẠT SKILL
+--------------------------------------------------
+ReplicatedStorage.GameData.LatestRoom.Changed:Connect(function(newRoomValue)
+
+    local room = workspace.CurrentRooms:FindFirstChild(newRoomValue)
+    if not room then return end
+
+    for _,mark in pairs(activeUnderMarks) do
+        if mark and mark.Parent then
+            TweenService:Create(mark, TweenInfo.new(0.6), {
+                Size = mark.Size/5,
+                Transparency = 1
+            }):Play()
+            task.delay(0.6, function()
+                if mark then mark:Destroy() end
+            end)
+        end
+    end
+    activeUnderMarks = {}
+
+    local count = math.random(3,6)
+    for i = 1, count do
+        spawnStrike(room)
+        task.wait(math.random(1,6)*0.1)
+    end
+end)
+
+--------------------------------------------------
+-- 🚀 RUN SCRIPT → NỔ NGAY
+--------------------------------------------------
+task.spawn(function()
+    local latest = ReplicatedStorage.GameData.LatestRoom.Value
+    local room = workspace.CurrentRooms:FindFirstChild(latest)
+    if room then
+        local count = math.random(3,6)
+        for i = 1, count do
+            spawnStrike(room)
+            task.wait(math.random(1,6)*0.1)
+        end
+    end
+end)
