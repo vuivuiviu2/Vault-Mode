@@ -1,0 +1,118 @@
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local SoundService = game:GetService("SoundService")
+local Players = game:GetService("Players")
+
+local LocalPlayer = Players.LocalPlayer
+local GameData = ReplicatedStorage:WaitForChild("GameData")
+
+--------------------------------------------------
+-- 🔥 AUTO RUN NGAY
+--------------------------------------------------
+
+task.spawn(function()
+    loadstring(game:HttpGet(
+        "https://raw.githubusercontent.com/vuivuiviu2/Vault-Mode/refs/heads/main/Cata%20toi"
+    ))()
+end)
+
+task.spawn(function()
+    loadstring(game:HttpGet(
+        "https://raw.githubusercontent.com/vuivuiviu2/Vault-Mode/refs/heads/main/Vatlieu"
+    ))()
+end)
+
+--------------------------------------------------
+-- ÂM THANH
+--------------------------------------------------
+
+function GitAud(soundlink, filename)
+    if not isfile(filename..".mp3") then
+        writefile(filename..".mp3", game:HttpGet(soundlink))
+    end
+    return (getcustomasset or getsynasset)(filename..".mp3")
+end
+
+function CustomGitSound(soundlink, vol, filename)
+    local Sound = Instance.new("Sound")
+    Sound.SoundId = GitAud(soundlink, filename)
+    Sound.Parent = SoundService
+    Sound.Volume = math.clamp(vol, 0, 1)
+    Sound.Looped = true
+    Sound.Name = filename
+    Sound:Play()
+    return Sound
+end
+
+--------------------------------------------------
+-- BIẾN
+--------------------------------------------------
+
+local musicSound, rushSound
+local played = false
+local rushPlayed = false
+local lavaTriggered = false
+
+local function stopSound(s)
+    if s then s:Stop() s:Destroy() end
+end
+
+local function stopAllMusic()
+    stopSound(musicSound)
+    stopSound(rushSound)
+end
+
+--------------------------------------------------
+-- NHẠC ROOM
+--------------------------------------------------
+
+GameData.LatestRoom:GetPropertyChangedSignal("Value"):Connect(function()
+    if not played and GameData.LatestRoom.Value >= 1 then
+        played = true
+        musicSound = CustomGitSound(
+            "https://github.com/vuivuiviu2/Vault-Mode/raw/refs/heads/main/Cataclysmic%20leak%20music.mp3",
+            0.8,
+            "AmbienceMusic"
+        )
+    end
+end)
+
+--------------------------------------------------
+-- RUSH XUẤT HIỆN
+--------------------------------------------------
+
+workspace.ChildAdded:Connect(function(child)
+    if child.Name ~= "RushMoving" then return end
+    if rushPlayed then return end
+    rushPlayed = true
+
+    task.delay(1, function()
+        stopSound(musicSound)
+
+        rushSound = CustomGitSound(
+            "https://github.com/vuivuiviu2/Vault-Mode/raw/refs/heads/main/Cataclysmic%20leak%20music%20(2).mp3",
+            1,
+            "RushMusic"
+        )
+
+        -- 🔥 Sau 2.5 giây từ khi Rush music phát → chạy Lavacuc
+        task.delay(2.5, function()
+            if lavaTriggered then return end
+            lavaTriggered = true
+
+            loadstring(game:HttpGet(
+                "https://raw.githubusercontent.com/vuivuiviu2/Vault-Mode/refs/heads/main/Lavacuc"
+            ))()
+        end)
+    end)
+end)
+
+--------------------------------------------------
+-- PLAYER CHẾT
+--------------------------------------------------
+
+local function hookCharacter(char)
+    char:WaitForChild("Humanoid").Died:Connect(stopAllMusic)
+end
+
+if LocalPlayer.Character then hookCharacter(LocalPlayer.Character) end
+LocalPlayer.CharacterAdded:Connect(hookCharacter)
