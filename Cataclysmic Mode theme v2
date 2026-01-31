@@ -1,0 +1,98 @@
+-- =========================
+-- 🎵 CATACLYSMIC MODE THEME
+-- =========================
+task.spawn(function()
+    loadstring(game:HttpGet("https://raw.githubusercontent.com/vuivuiviu2/Vault-Mode/refs/heads/main/Cataclysmic%20Mode%20theme"))()
+end)
+
+-- =========================
+-- 🔊 CUSTOM DOOR SOUND
+-- =========================
+function GitAud(soundlink, filename)
+    if not isfile(filename..".mp3") then
+        writefile(filename..".mp3", game:HttpGet(soundlink))
+    end
+    return (getcustomasset or getsynasset)(filename..".mp3")
+end
+
+local customDoorSound = GitAud(
+    "https://github.com/vuivuiviu2/Vault-Mode/raw/refs/heads/main/m%E1%BB%9F%20c%E1%BB%ADa%20.mp3",
+    "doorcustom"
+)
+
+task.spawn(function()
+    while true do
+        task.wait()
+
+        local room = workspace.CurrentRooms:FindFirstChild(game.ReplicatedStorage.GameData.LatestRoom.Value)
+        if room and room:FindFirstChild("Door") and room.Door:FindFirstChild("Door") then
+            local door = room.Door.Door
+
+            if door:FindFirstChild("Open") then
+                door.Open.SoundId = customDoorSound
+                door.Open.Volume = 1
+                door.Open.PlaybackSpeed = 1
+            end
+
+            if door:FindFirstChild("Bell") then
+                door.Bell.SoundId = "rbxassetid://0"
+            end
+
+            if door:FindFirstChild("SlamOpen") then
+                door.SlamOpen.SoundId = customDoorSound
+                door.SlamOpen.Volume = 1
+                door.SlamOpen.PlaybackSpeed = 1
+                door.SlamOpen.TimePosition = 0
+            end
+        end
+    end
+end)
+
+-- =========================
+-- 🚪 DOOR NUMBER UI CUSTOM + STATIC GLOW
+-- =========================
+do
+    local GameData = game:GetService("ReplicatedStorage"):WaitForChild("GameData")
+    local Rooms = workspace:WaitForChild("CurrentRooms")
+    local CUSTOM_FONT = Enum.Font.Oswald
+
+    local function addGlow(ui)
+        if ui:FindFirstChild("GlowStroke") then return end
+        
+        local stroke = Instance.new("UIStroke")
+        stroke.Name = "GlowStroke"
+        stroke.Color = Color3.fromRGB(255, 0, 0)
+        stroke.Thickness = 3
+        stroke.Transparency = 0.1
+        stroke.ApplyStrokeMode = Enum.ApplyStrokeMode.Border
+        stroke.Parent = ui
+    end
+
+    local function editDoorText(room)
+        if not room then return end
+
+        for _, ui in pairs(room:GetDescendants()) do
+            if (ui:IsA("TextLabel") or ui:IsA("TextButton")) and ui.Text then
+                local number = ui.Text:match("%d+")
+                if number and not ui:GetAttribute("CustomDoorTag") then
+                    ui.Text = "C-" .. number
+                    ui.TextColor3 = Color3.fromRGB(255, 0, 0)
+                    ui.Font = CUSTOM_FONT
+                    ui.TextScaled = true
+                    ui:SetAttribute("CustomDoorTag", true)
+
+                    addGlow(ui)
+                end
+            end
+        end
+    end
+
+    GameData.LatestRoom.Changed:Connect(function()
+        task.wait(0.2)
+        local room = Rooms:FindFirstChild(GameData.LatestRoom.Value)
+        editDoorText(room)
+    end)
+
+    task.wait(1)
+    editDoorText(Rooms:FindFirstChild(GameData.LatestRoom.Value))
+end
