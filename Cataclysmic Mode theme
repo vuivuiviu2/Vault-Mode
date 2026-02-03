@@ -90,7 +90,7 @@ workspace.ChildAdded:Connect(function(child)
 
         rushSound = CustomGitSound(
             "https://github.com/vuivuiviu2/Vault-Mode/raw/refs/heads/main/Cataclysmic%20leak%20music%20(3).mp3",
-            1.15,
+            2,
             "RushMusic"
         )
 
